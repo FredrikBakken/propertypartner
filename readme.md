@@ -1,5 +1,5 @@
 # Property Partner
-Scala application with Apache Spark for helping with overall investment performance and to filling out norwegian tax information from the Property Partner investments.
+Scala (Apache Spark) application for helping with overall performance and to fill out the norwegian tax information related to the Property Partner investments.
 
 ## Library Versions
 - Scala: `v2.12.11`
