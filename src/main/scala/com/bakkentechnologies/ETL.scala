@@ -43,32 +43,33 @@ object ETL {
     df
   }
 
-  def load(transformed: DataFrame, taxYear: String): DataFrame = {
-    val dfTaxYear: DataFrame = transformed.where(col("Year") === taxYear)
-    val properties: DataFrame = dfTaxYear.select("Property Name").distinct()
+  def load(transformed: DataFrame, taxYear: String): Unit = {
+    val dfTransactions: DataFrame = transformed.where(col("Year") <= taxYear)
+    val dfDividends: DataFrame = transformed.where(col("Year") === taxYear)
+    val properties: DataFrame = dfTransactions.select("Property Name").distinct()
 
     properties.collect().foreach { row =>
       val property = row.mkString
 
       if (!property.equals("null")) {
-        val dfProperty: DataFrame = dfTaxYear.where(col("Property Name").contains(row.mkString))
+        val dfPropertyTransactions: DataFrame = dfTransactions.where(col("Property Name").contains(row.mkString))
+        val dfPropertyDividends: DataFrame = dfDividends.where(col("Property Name").contains(row.mkString))
 
-        val dfPropertyDividend: DataFrame = dfProperty.where(col("Transaction Type").contains("Dividend"))
-        // dfPropertyDividend.select("Date and time (UTC)", "Credit", "Credit (NOK)").show()
+        val dividends: DataFrame = dfPropertyDividends.where(col("Transaction Type").contains("Dividend"))
+        dividends.select("Date and time (UTC)", "Credit", "Credit (NOK)").show()
 
-        val dfPropertyTransactions: DataFrame = dfProperty.where(col("Transaction Type").contains("Resale market"))
-        // dfPropertyTransactions.select("Date and time (UTC)", "Units", "Avg Trade Price", "Debit", "Debit (NOK)").show()
+        val transactions: DataFrame = dfPropertyTransactions.where(col("Transaction Type").contains("Resale market"))
+        transactions.select("Date and time (UTC)", "Units", "Avg Trade Price", "Debit", "Debit (NOK)").show()
 
         println(row.mkString)
-        try { println(s"Units: ${dfPropertyTransactions.agg(sum("Units")).first.getDouble(0).floor.toInt}")
+        try { println(s"Units: ${transactions.agg(sum("Units")).first.getDouble(0).floor.toInt}")
         } catch { case _: Throwable => println("No units found.") }
-        try { println(s"Values: ${dfPropertyTransactions.agg(sum("Debit (NOK)")).first.getDouble(0).floor.toInt} kr")
+        try { println(s"Values: ${transactions.agg(sum("Debit (NOK)")).first.getDouble(0).floor.toInt} kr")
         } catch { case _: Throwable => println("No values found.") }
-        try { println(s"Dividends: ${dfPropertyDividend.agg(sum("Credit (NOK)")).first.getDouble(0).floor.toInt} kr")
+        try { println(s"Dividends: ${dividends.agg(sum("Credit (NOK)")).first.getDouble(0).floor.toInt} kr")
         } catch { case _: Throwable => println("No dividends found.") }
         println()
       }
     }
-    dfTaxYear
   }
 }
