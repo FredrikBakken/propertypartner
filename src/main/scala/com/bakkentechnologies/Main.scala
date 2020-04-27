@@ -20,7 +20,6 @@ object Main {
 
     // ETL - Extract, Transform, Load
     val extracted: DataFrame = ETL.extract(spark, "account-transactions-manual-GBP.csv")
-    val transformed: DataFrame = ETL.transform(extracted)
-    ETL.load(transformed, "2019")
+    ETL.transform(extracted, 2019)
   }
 }
