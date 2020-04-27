@@ -15,8 +15,8 @@ object ETL {
   }
 
   def transform(extracted: DataFrame): DataFrame = {
-    val nokDebit = udf((date: String) => {
-      val input = Http(s"https://api.exchangeratesapi.io/${date}?base=GBP&symbols=NOK").asString.body
+    val nokDebit = udf((date: String, currencyCode: String) => {
+      val input = Http(s"https://api.exchangeratesapi.io/$date?base=$currencyCode&symbols=NOK").asString.body
       // println(input)
 
       val debit: Float = input.split("\"NOK\":")(1).split('}')(0).toFloat
@@ -31,7 +31,7 @@ object ETL {
       .withColumn("Date",
         date_format(to_timestamp(col("Date and time (UTC)"), "dd/MM/yyyy HH:mm:ss"), "yyyy-MM-dd"))
       .withColumn("Exchange Rate",
-        lit(nokDebit(col("Date"))))
+        lit(nokDebit(col("Date"), col("Currency code"))))
       .withColumn("Debit (NOK)", when(
         col("Debit") =!= "null",
         lit(col("Debit") * col("Exchange Rate"))

@@ -4,7 +4,7 @@ Scala (Apache Spark) application for helping with overall performance and to fil
 ## Library Versions
 - Scala: `v2.12.11`
 - sbt: `v1.3.4`
-- Apache Spark: `v2.4.5`
+- Apache Spark: `v3.0.0-preview2`
 
 ## Getting Started
 1. Clone project
