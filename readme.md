@@ -1,4 +1,4 @@
-# Property Partner Transactions
+# [Property Partner](https://www.propertypartner.co?r=Fredrik01) Transactions
 Scala (Apache Spark) application for helping with getting an overview of the performance and to fill out the norwegian tax information related to the property dividends and transactions.
 
 ## Library Versions
