@@ -18,8 +18,11 @@ object Main {
 
     spark.sparkContext.setLogLevel("ERROR")
 
+    var currency: String = "NOK"
+    if (args.length > 0) currency = args(0)
+
     // ETL - Extract, Transform, Load
     val extracted: DataFrame = ETL.extract(spark, "account-transactions-manual-GBP.csv")
-    ETL.transform(extracted, 2019)
+    ETL.transform(extracted, currency, 2019)
   }
 }

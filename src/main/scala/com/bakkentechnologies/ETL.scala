@@ -15,12 +15,12 @@ object ETL {
   }
 
 
-  def transform(extracted: DataFrame, taxYear: Int): Unit = {
-    val nokDebit = udf((date: String, currencyCode: String) => {
-      val input = Http(s"https://api.exchangeratesapi.io/$date?base=$currencyCode&symbols=NOK").asString.body
+  def transform(extracted: DataFrame, currency: String, taxYear: Int): Unit = {
+    val nokDebit = udf((date: String, baseCurrency: String) => {
+      val input = Http(s"https://api.exchangeratesapi.io/$date?base=$baseCurrency&symbols=$currency").asString.body
       // println(input)
 
-      val debit: Float = input.split("\"NOK\":")(1).split('}')(0).toFloat
+      val debit: Float = input.split("\"" + currency + "\":")(1).split('}')(0).toFloat
       // println(debit)
 
       debit
@@ -33,10 +33,10 @@ object ETL {
         date_format(to_timestamp(col("Date and time (UTC)"), "dd/MM/yyyy HH:mm:ss"), "yyyy-MM-dd"))
       .withColumn("Exchange Rate",
         lit(nokDebit(col("Date"), col("Currency code"))))
-      .withColumn("Debit (NOK)", when(
+      .withColumn("Debit (" + currency + ")", when(
         col("Debit") =!= "null",
         lit(col("Debit") * col("Exchange Rate"))))
-      .withColumn("Credit (NOK)", when(
+      .withColumn("Credit (" + currency + ")", when(
         col("Credit") =!= "null",
         lit(col("Credit") * col("Exchange Rate"))))
 
@@ -52,21 +52,21 @@ object ETL {
         val dfPropertyDividends: DataFrame = dfDividends.where(
           col("Property Name").contains(property)).where(
           col("Transaction Type").contains("Dividend"))
-        val dividends = transformDividends(dfPropertyDividends)
+        val dividends = transformDividends(dfPropertyDividends, currency)
 
         // handle transactions
         val dfPropertyTransactions: DataFrame = dfTransactions.where(
           col("Property Name").contains(property)).where(
           col("Transaction Type").contains("Resale market"))
-        val transactions = transformTransactions(dfPropertyTransactions)
+        val transactions = transformTransactions(dfPropertyTransactions, currency)
 
-        load(property, dividends, transactions)
+        load(property, dividends, transactions, currency)
       }
     }
   }
 
 
-  private def transformDividends(df: DataFrame): DataFrame = {
+  private def transformDividends(df: DataFrame, currency: String): DataFrame = {
     val dividends: DataFrame = df
       .select(
         "Date and time (UTC)",
@@ -77,13 +77,13 @@ object ETL {
         "Credit",
         "Currency code",
         "Exchange Rate",
-        "Credit (NOK)"
+        "Credit (" + currency + ")"
       )
     dividends
   }
 
 
-  private def transformTransactions(df: DataFrame): DataFrame = {
+  private def transformTransactions(df: DataFrame, currency: String): DataFrame = {
     if (df.count() > 0) {
       var tradeCosts: DataFrame = df
         .groupBy("Date and time (UTC)")
@@ -119,13 +119,13 @@ object ETL {
         "df2.Resale market trade fees",
         "df2.Resale market trade tax",
         "df1.Exchange Rate",
-        "df1.Debit (NOK)")
+        "df1.Debit (" + currency + ")")
         .filter(col("Units") =!= "null")
         .withColumnRenamed("Resale market trade fees", "Fees")
         .withColumnRenamed("Resale market trade tax", "Taxes")
-        .withColumn("Fees (NOK)",
+        .withColumn("Fees (" + currency + ")",
           lit(col("Fees") * col("Exchange Rate"))
-        ).withColumn("Taxes (NOK)",
+        ).withColumn("Taxes (" + currency + ")",
         lit(col("Taxes") * col("Exchange Rate"))
       )
       return transactions
@@ -134,12 +134,12 @@ object ETL {
   }
 
 
-  def load(property: String, dividends: DataFrame, transactions: DataFrame): Unit = {
+  def load(property: String, dividends: DataFrame, transactions: DataFrame, currency: String): Unit = {
     // dividend results
     println(s"$property - Dividends:")
     if (dividends != null && dividends.count() > 0) {
-      printData("Dividends (NOK)", dividends, "Credit (NOK)", "", " kr")
-      printData("Dividends (GBP)", dividends, "Credit", "£ ", "")
+      printData("Dividends (" + currency + ")", dividends, "Credit (" + currency + ")")
+      printData("Dividends (GBP)", dividends, "Credit")
       dividends.show(dividends.count().toInt, false)
     } else {
       println("No dividend data found.")
@@ -150,12 +150,12 @@ object ETL {
     // transaction results
     println(s"$property - Transactions:")
     if (transactions != null && transactions.count() > 0) {
-      printData("Debit (NOK)", transactions, "Debit (NOK)", "", " kr")
-      printData("Fees  (NOK)", transactions, "Fees (NOK)", "", " kr")
-      printData("Taxes (NOK)", transactions, "Taxes (NOK)", "", " kr")
-      printData("Debit (GBP)", transactions, "Debit", "£ ", "")
-      printData("Fees  (GBP)", transactions, "Fees", "£ ", "")
-      printData("Taxes (GBP)", transactions, "Taxes", "£ ", "")
+      printData("Debit (" + currency + ")", transactions, "Debit (" + currency + ")")
+      printData("Fees  (" + currency + ")", transactions, "Fees (" + currency + ")")
+      printData("Taxes (" + currency + ")", transactions, "Taxes (" + currency + ")")
+      printData("Debit (GBP)", transactions, "Debit")
+      printData("Fees  (GBP)", transactions, "Fees")
+      printData("Taxes (GBP)", transactions, "Taxes")
       transactions.show(transactions.count().toInt, false)
     } else {
       println("No transaction data found.")
@@ -165,9 +165,9 @@ object ETL {
     println()
   }
 
-  private def printData(definition: String, df: DataFrame, column: String, dollar: String, kroner: String): Unit = {
+  private def printData(definition: String, df: DataFrame, column: String): Unit = {
     try {
-      println(s"$definition: $dollar${df.agg(sum(column)).first.getDouble(0).floor.toInt}$kroner")
+      println(s"$definition: ${df.agg(sum(column)).first.getDouble(0).floor.toInt}")
     } catch {
       case _: Throwable => println(s"No value found for $definition.")
     }

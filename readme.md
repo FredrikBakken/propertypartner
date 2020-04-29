@@ -11,3 +11,5 @@ Scala (Apache Spark) application for helping with getting an overview of the per
 2. Create a directory at root level `/reports`
 3. Add the transactions `.csv`
 4. Execute the application
+
+The application can be launched with a custom input argument for currency to convert the dividends and transactions to. Default currency (when no arguments provided) is `NOK`. 
