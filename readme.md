@@ -1,4 +1,4 @@
-# [Property Partner](https://www.propertypartner.co?r=Fredrik01) Transactions
+# :house_with_garden: [Property Partner](https://www.propertypartner.co?r=Fredrik01) Transactions
 Scala (Apache Spark) application for helping with getting an overview of the performance and to fill out the norwegian tax information related to the property dividends and transactions.
 
 ## Library Versions
@@ -12,4 +12,4 @@ Scala (Apache Spark) application for helping with getting an overview of the per
 3. Add the transactions `.csv`
 4. Execute the application
 
-The application can be launched with a custom input argument for currency to convert the dividends and transactions to. Default currency (when no arguments provided) is `NOK`. 
+The application can be launched with a custom input argument for currency to convert the dividends and transactions to. Default currency (when no argument provided) is `NOK`. 
